@@ -47,6 +47,7 @@ function DisplayCalender() {
     }));
   }
 
+  // Generating month name
   function getMonthName(year, month) {
     return new Date(year, month).toLocaleString("en-US", { month: "short" });
   }
@@ -169,7 +170,7 @@ function DisplayCalender() {
 
   return (
     <div className="flex w-full h-full flex-col">
-      {/* Sticky header */}
+      {/* Header */}
       <div className="flex sticky top-0 z-20 h-12 w-full items-center p-1 md:p-6 lg:px-12 flex-row justify-between text-base bg-white">
         <div className="flex flex-row gap-5 items-center">
           <span
@@ -188,7 +189,7 @@ function DisplayCalender() {
         </span>
       </div>
 
-      {/* Sticky weekdays */}
+      {/*  Weekdays */}
       <div className="flex w-full h-10 sticky top-12 z-10 bg-white">
         <ul className="flex w-full items-center">
           {weekDays.map((day) => (
@@ -199,7 +200,7 @@ function DisplayCalender() {
         </ul>
       </div>
 
-      {/* Scrollable calendar */}
+      {/* Calendar */}
       <div
         ref={scrollContainerRef}
         className="flex flex-wrap w-full overflow-y-auto flex-1"
@@ -244,6 +245,7 @@ function DisplayCalender() {
 
         <div ref={bottomRef}></div>
       </div>
+      
     </div>
   );
 }
