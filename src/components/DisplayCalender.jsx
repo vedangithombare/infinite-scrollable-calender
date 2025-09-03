@@ -1,160 +1,263 @@
 /* eslint-disable no-unused-vars */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 function DisplayCalender() {
   const [currentMonthYear, setCurrentMonthYear] = useState({
     year: null,
     month: null,
   });
-
   const [currentMonthName, setCurrentMonthName] = useState("");
   const [presentTimeLine, setPresentTimeLine] = useState([]);
   const [presentVisibleDates, setPresentVisibleDates] = useState([]);
+
+  const scrollContainerRef = useRef(null);
+  const topRef = useRef(null);
+  const bottomRef = useRef(null);
+  const currentMonthRef = useRef(null);
+
+  const monthRefs = useRef({});
+
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const today = new Date();
-  console.log(today.getDate());
 
-  //helper function:  getting dates of the month
+  // Helper: get all dates of a month
   function getMonthDates(year, monthIndex) {
-    let dates = [];
-    let monthDays = new Date(year, monthIndex + 1, 0).getDate();
-
-    for (let i = 1; i <= monthDays; i++) {
-      dates.push(new Date(year, monthIndex, i));
-    }
-    return dates;
+    const monthDays = new Date(year, monthIndex + 1, 0).getDate();
+    return Array.from(
+      { length: monthDays },
+      (_, i) => new Date(year, monthIndex, i + 1)
+    );
   }
 
-  // getting past and future  6 months on the basis of current month and year
-  function getPrevNextMonths(year, month, range = 6) {
-    let pastMonths = [];
-    let futureMonths = [];
-    let newYear;
-    let newMonth;
-    let currentTimeLine;
-
-    // calculating past 6 months on the basis of present year and month
-    for (let past = 1; past <= range; past++) {
-      newMonth = month - past;
-      newYear = year;
-
-      if (newMonth <= 0) {
-        newMonth += 12;
-        newYear -= 1;
-      }
-      pastMonths.push({ year: newYear, month: newMonth });
+  // Get past/future months
+  function getPrevNextMonths(year, month, range = 1) {
+    let months = [];
+    for (let offset = -range; offset <= range; offset++) {
+      const date = new Date(year, month + offset);
+      months.push({ year: date.getFullYear(), month: date.getMonth() });
     }
-
-    // calculating future 6 months on the basis of present year and month
-    for (let future = 1; future <= range; future++) {
-      newMonth = month + future;
-      newYear = year;
-
-      if (newMonth > 11) {
-        newMonth -= 12;
-        newYear += 1;
-      }
-      futureMonths.push({ year: newYear, month: newMonth });
-    }
-    // reversing past months
-    pastMonths.reverse();
-
-    currentTimeLine = [...pastMonths, { year, month }, ...futureMonths];
-    return currentTimeLine;
+    return months;
   }
 
-  // getting the dates of all the current 13 months
-  function getMonthDatesArr(presentTimeLine) {
-    let dates = [];
-    for (let j = 0; j < presentTimeLine.length; j++) {
-      let currentYear = presentTimeLine[j].year;
-      let currentMonth = presentTimeLine[j].month;
-      let newDate = getMonthDates(currentYear, currentMonth);
-      dates.push(...newDate);
-    }
-    console.log(dates);
-    return dates;
+  // Convert timeline into month objects with dates
+  function getMonthDatesArr(timeline) {
+    return timeline.map(({ year, month }) => ({
+      year,
+      month,
+      dates: getMonthDates(year, month),
+    }));
   }
-
-  let visibleData = getMonthDatesArr(presentTimeLine);
-  console.log(visibleData);
 
   function getMonthName(year, month) {
-    const currentMonth = new Date(year, month);
-    const monthName = currentMonth.toLocaleString("en-US", { month: "short" });
-    return monthName;
+    return new Date(year, month).toLocaleString("en-US", { month: "short" });
   }
 
-  let monthName = getMonthName(currentMonthYear.year, currentMonthYear.month);
-
-  useState(() => {
-    /*heres the key acc to this month and year the data should get loaded*/
-    setPresentTimeLine(getPrevNextMonths(2025, 8));
-    setCurrentMonthName(monthName);
-  }, [presentTimeLine]);
+  // Initialize timeline with current month + surrounding months
   useEffect(() => {
-    setPresentVisibleDates(visibleData);
-  }, [visibleData]);
+    const today = new Date();
+    const initialTimeline = getPrevNextMonths(
+      today.getFullYear(),
+      today.getMonth(),
+      6
+    );
+    setPresentTimeLine(initialTimeline);
+    setCurrentMonthYear({ year: today.getFullYear(), month: today.getMonth() });
+    setCurrentMonthName(getMonthName(today.getFullYear(), today.getMonth()));
+  }, []);
+
+  // Infinite scroll observer
+  useEffect(() => {
+    if (!scrollContainerRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+
+          if (entry.target === bottomRef.current) {
+            const last = presentTimeLine[presentTimeLine.length - 1];
+            const nextTimeline = getPrevNextMonths(last.year, last.month, 1);
+            const filteredNext = nextTimeline.filter(
+              (m) =>
+                !presentTimeLine.some(
+                  (p) => p.year === m.year && p.month === m.month
+                )
+            );
+            if (filteredNext.length > 0)
+              setPresentTimeLine((prev) => [...prev, ...filteredNext]);
+          }
+
+          if (entry.target === topRef.current) {
+            const container = scrollContainerRef.current;
+            const prevScrollHeight = container.scrollHeight;
+
+            const first = presentTimeLine[0];
+            const prevTimeline = getPrevNextMonths(first.year, first.month, 1);
+            const filteredPrev = prevTimeline.filter(
+              (m) =>
+                !presentTimeLine.some(
+                  (p) => p.year === m.year && p.month === m.month
+                )
+            );
+
+            if (filteredPrev.length > 0) {
+              setPresentTimeLine((prev) => [...filteredPrev, ...prev]);
+              // Adjust scroll so view doesn’t jump
+              requestAnimationFrame(() => {
+                container.scrollTop +=
+                  container.scrollHeight - prevScrollHeight;
+              });
+            }
+          }
+        });
+      },
+      { root: scrollContainerRef.current, threshold: 1.0 }
+    );
+
+    if (topRef.current) observer.observe(topRef.current);
+    if (bottomRef.current) observer.observe(bottomRef.current);
+
+    return () => observer.disconnect();
+  }, [presentTimeLine]);
+
+  // Update visible dates
+  useEffect(() => {
+    const monthsWithDates = getMonthDatesArr(presentTimeLine);
+    setPresentVisibleDates(monthsWithDates);
+  }, [presentTimeLine]);
+
+  // Update header on scroll
+  useEffect(() => {
+    if (!scrollContainerRef.current) return;
+
+    const headerObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const [year, month] = entry.target.dataset.month
+              .split("-")
+              .map(Number);
+            setCurrentMonthYear({ year, month });
+            setCurrentMonthName(getMonthName(year, month));
+          }
+        });
+      },
+      { root: scrollContainerRef.current, threshold: 0.5 }
+    );
+
+    presentVisibleDates.forEach(({ year, month }) => {
+      const el = monthRefs.current[`${year}-${month}`];
+      if (el) headerObserver.observe(el);
+    });
+
+    return () => headerObserver.disconnect();
+  }, [presentVisibleDates]);
+
+  // Auto-scroll to current month on first render
+  useEffect(() => {
+    if (currentMonthRef.current) {
+      currentMonthRef.current.scrollIntoView({
+        behavior: "auto",
+        block: "center",
+      });
+    }
+  }, [presentVisibleDates]);
+
+  // Prepare a continuous date array for seamless flow
+  const allDates = [];
+  presentVisibleDates.forEach(({ dates }) => {
+    allDates.push(...dates);
+  });
+
+  // Calculate empty placeholders only at start
+  const firstMonth = presentVisibleDates[0];
+  const emptyStartCount = firstMonth ? firstMonth.dates[0].getDay() : 0;
 
   return (
-    <>
-      <div className="flex w-full h-full flex-col  ">
-        <div className="flex h-12 w-full items-center p-1 md:p-6 lg:px-12 flex-row justify-between text-base">
-          <div className="flex flex-row gap-5 items-center ">
-            <span
-              style={{ fontWeight: "600" }}
-              class="material-symbols-outlined"
-            >
-              arrow_back
-            </span>
-            <span className="font-bold">
-              <span className="text-[#1d4ce3]">my</span> hair Diary
-            </span>
-          </div>
-          <span className="flex flex-row gap-1">
-            <span className="font-bold">{currentMonthName}</span>
-            <span>2025</span>
+    <div className="flex w-full h-full flex-col">
+      {/* Sticky header */}
+      <div className="flex sticky top-0 z-20 h-12 w-full items-center p-1 md:p-6 lg:px-12 flex-row justify-between text-base bg-white">
+        <div className="flex flex-row gap-5 items-center">
+          <span
+            style={{ fontWeight: "600" }}
+            className="material-symbols-outlined"
+          >
+            arrow_back
+          </span>
+          <span className="font-bold">
+            <span className="text-[#1d4ce3]">my</span> hair Diary
           </span>
         </div>
-
-        <div className=" flex flex-1   flex-col lg:p-[2rem] lg:px-[4rem]">
-          <div className="flex w-full h-10  sticky ">
-            <ul className="flex w-full items-center ">
-              {weekDays.map((day) => {
-                return (
-                  <li className="flex w-full justify-center items-center">
-                    {day}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-
-          <div className="flex flex-wrap w-full  overflow-y-auto ">
-            <div className="flex flex-col w-1/7  items-center h-[10rem] border-t border-l  border-gray-400 ">
-              <span>1</span>
-              <div className="flex w-full h-[60%] bg-blue-300"></div>
-            </div>
-
-            {/* <div
-              className={`flex w-1/7 items-start justify-center  h-[10rem] border-t border-l border-gray-400 border-gray-400`}
-            >
-              1
-            </div> */}
-
-            {presentVisibleDates.map((date) => {
-              return (
-                <div
-                  className={`flex w-1/7 items-start justify-center  h-[10rem] border-t border-l border-gray-400 border-gray-400`}
-                >
-                  {date.getDate()}
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <span className="flex flex-row gap-1">
+          <span className="font-bold">{currentMonthName}</span>
+          <span>{currentMonthYear.year}</span>
+        </span>
       </div>
-    </>
+
+      {/* Sticky weekdays */}
+      <div className="flex w-full h-10 sticky top-12 z-10 bg-white">
+        <ul className="flex w-full items-center">
+          {weekDays.map((day) => (
+            <li key={day} className="flex w-full justify-center items-center">
+              {day}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Scrollable calendar */}
+      <div
+        ref={scrollContainerRef}
+        className="flex flex-wrap w-full overflow-y-auto flex-1"
+      >
+        <div ref={topRef}></div>
+
+        {/* Empty placeholders at the start */}
+        {Array.from({ length: emptyStartCount }).map((_, idx) => (
+          <div
+            key={`empty-${idx}`}
+            className="flex w-1/7 h-[10rem] border-t border-l border-gray-400"
+          />
+        ))}
+
+        {/* All dates in a continuous flow */}
+        {allDates.map((date) => {
+          const key = date.toISOString();
+          // attach month ref for header updating
+          const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
+          const ongoingdate = new Date();
+
+          const isCurrentMonth =
+            ongoingdate.getFullYear() === date.getFullYear() &&
+            ongoingdate.getMonth() === date.getMonth();
+
+          if (!monthRefs.current[monthKey]) monthRefs.current[monthKey] = null;
+          return (
+            <div
+              key={key}
+              ref={(el) => {
+                if (!monthRefs.current[monthKey])
+                  monthRefs.current[monthKey] = el;
+                if (
+                  date.getFullYear() === currentMonthYear.year &&
+                  date.getMonth() === currentMonthYear.month &&
+                  !currentMonthRef.current
+                )
+                  currentMonthRef.current = el;
+              }}
+              data-month={monthKey}
+              className={`flex w-1/7 items-start justify-center h-[10rem] border-t border-l border-gray-400 ${
+                isCurrentMonth ? "text-black" : "text-gray-400"
+              }`}
+            >
+              {date.getDate()}
+            </div>
+          );
+        })}
+
+        <div ref={bottomRef}></div>
+      </div>
+    </div>
   );
 }
+
 export default DisplayCalender;
