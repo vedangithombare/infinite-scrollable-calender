@@ -14,8 +14,8 @@ function DisplayCalender() {
   const topRef = useRef(null);
   const bottomRef = useRef(null);
   const currentMonthRef = useRef(null);
-
   const monthRefs = useRef({});
+  const hasScrolledRef = useRef(false);
 
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -28,7 +28,7 @@ function DisplayCalender() {
     );
   }
 
-  // Get past/future months
+  // Generate past/future months for infinite scroll
   function getPrevNextMonths(year, month, range = 1) {
     let months = [];
     for (let offset = -range; offset <= range; offset++) {
@@ -63,6 +63,11 @@ function DisplayCalender() {
     setCurrentMonthYear({ year: today.getFullYear(), month: today.getMonth() });
     setCurrentMonthName(getMonthName(today.getFullYear(), today.getMonth()));
   }, []);
+
+  // Update visible dates whenever timeline changes
+  useEffect(() => {
+    setPresentVisibleDates(getMonthDatesArr(presentTimeLine));
+  }, [presentTimeLine]);
 
   // Infinite scroll observer
   useEffect(() => {
@@ -101,7 +106,7 @@ function DisplayCalender() {
 
             if (filteredPrev.length > 0) {
               setPresentTimeLine((prev) => [...filteredPrev, ...prev]);
-              // Adjust scroll so view doesn’t jump
+              // Maintain scroll position
               requestAnimationFrame(() => {
                 container.scrollTop +=
                   container.scrollHeight - prevScrollHeight;
@@ -117,12 +122,6 @@ function DisplayCalender() {
     if (bottomRef.current) observer.observe(bottomRef.current);
 
     return () => observer.disconnect();
-  }, [presentTimeLine]);
-
-  // Update visible dates
-  useEffect(() => {
-    const monthsWithDates = getMonthDatesArr(presentTimeLine);
-    setPresentVisibleDates(monthsWithDates);
   }, [presentTimeLine]);
 
   // Update header on scroll
@@ -152,25 +151,21 @@ function DisplayCalender() {
     return () => headerObserver.disconnect();
   }, [presentVisibleDates]);
 
-  // Auto-scroll to current month on first render
+  // Auto-scroll to current month only on first render
   useEffect(() => {
-    if (currentMonthRef.current) {
+    if (!hasScrolledRef.current && currentMonthRef.current) {
       currentMonthRef.current.scrollIntoView({
         behavior: "auto",
         block: "center",
       });
+      hasScrolledRef.current = true;
     }
   }, [presentVisibleDates]);
 
-  // Prepare a continuous date array for seamless flow
+  // Flatten dates for continuous flow
   const allDates = [];
-  presentVisibleDates.forEach(({ dates }) => {
-    allDates.push(...dates);
-  });
-
-  // Calculate empty placeholders only at start
-  const firstMonth = presentVisibleDates[0];
-  const emptyStartCount = firstMonth ? firstMonth.dates[0].getDay() : 0;
+  presentVisibleDates.forEach(({ dates }) => allDates.push(...dates));
+  const emptyStartCount = allDates.length ? allDates[0].getDay() : 0;
 
   return (
     <div className="flex w-full h-full flex-col">
@@ -211,37 +206,30 @@ function DisplayCalender() {
       >
         <div ref={topRef}></div>
 
-        {/* Empty placeholders at the start */}
-        {Array.from({ length: emptyStartCount }).map((_, idx) => (
+        {Array.from({ length: emptyStartCount }).map((_, index) => (
           <div
-            key={`empty-${idx}`}
+            key={`empty-${index}`}
             className="flex w-1/7 h-[10rem] border-t border-l border-gray-400"
-          />
+          ></div>
         ))}
 
-        {/* All dates in a continuous flow */}
         {allDates.map((date) => {
           const key = date.toISOString();
-          // attach month ref for header updating
           const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
-          const ongoingdate = new Date();
-
+          const today = new Date();
           const isCurrentMonth =
-            ongoingdate.getFullYear() === date.getFullYear() &&
-            ongoingdate.getMonth() === date.getMonth();
+            today.getFullYear() === date.getFullYear() &&
+            today.getMonth() === date.getMonth();
 
           if (!monthRefs.current[monthKey]) monthRefs.current[monthKey] = null;
+
           return (
             <div
               key={key}
               ref={(el) => {
                 if (!monthRefs.current[monthKey])
                   monthRefs.current[monthKey] = el;
-                if (
-                  date.getFullYear() === currentMonthYear.year &&
-                  date.getMonth() === currentMonthYear.month &&
-                  !currentMonthRef.current
-                )
+                if (isCurrentMonth && !currentMonthRef.current)
                   currentMonthRef.current = el;
               }}
               data-month={monthKey}
