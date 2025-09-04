@@ -1,7 +1,12 @@
 /* eslint-disable no-unused-vars */
 import { useEffect, useRef, useState } from "react";
+import {
+  getPrevNextMonths,
+  getMonthName,
+  getMonthDatesArr,
+} from "./utils/CalenderUtils";
 
-function DisplayCalender({ setClickedDate }) {
+function DisplayCalender({ setClickedDate, data, compareDates }) {
   const [currentMonthYear, setCurrentMonthYear] = useState({
     year: null,
     month: null,
@@ -18,39 +23,6 @@ function DisplayCalender({ setClickedDate }) {
   const hasScrolledRef = useRef(false);
 
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-  // Helper: get all dates of a month
-  function getMonthDates(year, monthIndex) {
-    const monthDays = new Date(year, monthIndex + 1, 0).getDate();
-    return Array.from(
-      { length: monthDays },
-      (_, i) => new Date(year, monthIndex, i + 1)
-    );
-  }
-
-  // Generate past/future months for infinite scroll
-  function getPrevNextMonths(year, month, range = 1) {
-    let months = [];
-    for (let offset = -range; offset <= range; offset++) {
-      const date = new Date(year, month + offset);
-      months.push({ year: date.getFullYear(), month: date.getMonth() });
-    }
-    return months;
-  }
-
-  // Convert timeline into month objects with dates
-  function getMonthDatesArr(timeline) {
-    return timeline.map(({ year, month }) => ({
-      year,
-      month,
-      dates: getMonthDates(year, month),
-    }));
-  }
-
-  // Generating month name
-  function getMonthName(year, month) {
-    return new Date(year, month).toLocaleString("en-US", { month: "short" });
-  }
 
   // Initialize timeline with current month + surrounding months
   useEffect(() => {
@@ -83,9 +55,9 @@ function DisplayCalender({ setClickedDate }) {
             const last = presentTimeLine[presentTimeLine.length - 1];
             const nextTimeline = getPrevNextMonths(last.year, last.month, 1);
             const filteredNext = nextTimeline.filter(
-              (m) =>
+              (date) =>
                 !presentTimeLine.some(
-                  (p) => p.year === m.year && p.month === m.month
+                  (presentDate) => presentDate.year === date.year && presentDate.month === date.month
                 )
             );
             if (filteredNext.length > 0)
@@ -99,9 +71,9 @@ function DisplayCalender({ setClickedDate }) {
             const first = presentTimeLine[0];
             const prevTimeline = getPrevNextMonths(first.year, first.month, 1);
             const filteredPrev = prevTimeline.filter(
-              (m) =>
+              (date) =>
                 !presentTimeLine.some(
-                  (p) => p.year === m.year && p.month === m.month
+                  (presentDate) => presentDate.year === date.year && presentDate.month === date.month
                 )
             );
 
@@ -189,7 +161,7 @@ function DisplayCalender({ setClickedDate }) {
         </span>
       </div>
 
-      {/*  Weekdays */}
+      {/* Weekdays */}
       <div className="flex w-full h-10 sticky top-12 z-10 bg-white">
         <ul className="flex w-full items-center">
           {weekDays.map((day) => (
@@ -207,7 +179,7 @@ function DisplayCalender({ setClickedDate }) {
       >
         <div ref={topRef}></div>
 
-        {/* Starting empty slots for aligning weekdays */}
+        {/* Empty slots */}
         {Array.from({ length: emptyStartCount }).map((_, index) => (
           <div
             key={`empty-${index}`}
@@ -223,10 +195,15 @@ function DisplayCalender({ setClickedDate }) {
             today.getFullYear() === date.getFullYear() &&
             today.getMonth() === date.getMonth();
 
+          // getting post for calender cell
+          const postsForDate = data.filter((post) =>
+            compareDates(post.date, date)
+          );
+
           if (!monthRefs.current[monthKey]) monthRefs.current[monthKey] = null;
 
           return (
-            <div
+            <div 
               key={key}
               ref={(el) => {
                 if (!monthRefs.current[monthKey])
@@ -235,12 +212,22 @@ function DisplayCalender({ setClickedDate }) {
                   currentMonthRef.current = el;
               }}
               data-month={monthKey}
-              className={`flex w-1/7 items-start justify-center cursor-pointer h-[10rem] border-t border-l border-gray-400 ${
+              className={`flex w-1/7 flex-col items-start justify-start cursor-pointer h-[10rem] border-t border-l border-gray-400 p-1 ${
                 isCurrentMonth ? "text-black" : "text-gray-400"
               }`}
               onClick={() => setClickedDate(date)}
             >
-              {date.getDate()}
+              <span className="text-xs font-semibold">{date.getDate()}</span>
+              <div className="flex flex-wrap gap-1 w-full h-full mt-1 overflow-hidden">
+                {postsForDate.map((post, index) => (
+                  <img
+                    key={index}
+                    src={post.imgUrl}
+                    alt={"post image"}
+                    className="w-full h-full object-cover rounded"
+                  />
+                ))}
+              </div>
             </div>
           );
         })}

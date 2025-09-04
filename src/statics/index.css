@@ -17,3 +17,7 @@ body {
   height: 100dvh;
 }
 
+.scroll-container {
+  will-change: scroll-position;
+  transform: translateZ(0);
+}
