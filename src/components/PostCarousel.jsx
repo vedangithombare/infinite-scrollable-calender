@@ -1,171 +1,119 @@
 import { useEffect, useState } from "react";
-import { sampleData } from "../statics/data";
+import CarouselCard from "./CarouselCard";
+import { MdChevronLeft, MdChevronRight, MdClose } from "react-icons/md";
 
-function PostCarausel() {
-  const [data, setData] = useState([]);
+function PostCarousel({ data, postIndex, setPostIndex }) {
+  const [touchStartX, setTouchStartX] = useState(null);
 
-  //   getting full month string
-  function getDateString(date) {
-    let dateStr = "";
-    let dateArr = date.split("/");
-    let month = dateArr[1];
-    let year = dateArr[2];
-    let monthName = new Date(year, month).toLocaleString("en-US", {
-      month: "long",
-    });
-
-    dateStr = `${dateArr[0]} ${monthName}`;
-
-    return dateStr;
-  }
-
-  //   shortening article
-  function shortenArticle(desc) {
-    let maxLength = 100;
-
-    if (desc.length > maxLength) {
-      return desc.substring(0, maxLength) + "...";
-    } else {
-      return desc;
-    }
-  }
-
-  //  Category badges
-  function renderBadges(categories) {
-    const colors = [
-      "bg-purple-100 text-purple-600",
-      "bg-pink-100 text-pink-600",
-      "bg-blue-100 text-blue-600",
-      "bg-green-100 text-green-600",
-      "bg-yellow-100 text-yellow-600",
-    ];
-
-    return (
-      <div className="flex gap-1">
-        {categories.slice(0, 2).map((category, index) => (
-          <span
-            key={index}
-            className={`px-2 py-1 text-xs font-semibold rounded-full ${
-              colors[index % colors.length]
-            }`}
-          >
-            {category
-              .split(" ")
-              .map((categoryStyle) => categoryStyle[0])
-              .join("")
-              .toUpperCase()}
-          </span>
-        ))}
-      </div>
-    );
-  }
-
-  //  Star rating
-  function renderStars(rating) {
-    return (
-      <div className="flex">
-        {Array.from({ length: 5 }).map((_, i) => {
-          const filled = i + 1 <= Math.floor(rating);
-          const half = !filled && i < rating;
-
-          return (
-            <div key={i} className="relative w-4 h-4">
-              {filled ? (
-                // full star
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  className="w-4 h-4 text-blue-500"
-                >
-                  <path d="M12 .587l3.668 7.431 8.2 1.193-5.934 5.782 1.401 8.171L12 18.896l-7.335 3.868 1.401-8.171L.132 9.211l8.2-1.193z" />
-                </svg>
-              ) : half ? (
-                <>
-                  {/* empty star base */}
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    className="w-4 h-4 text-gray-300"
-                  >
-                    <path d="M12 .587l3.668 7.431 8.2 1.193-5.934 5.782 1.401 8.171L12 18.896l-7.335 3.868 1.401-8.171L.132 9.211l8.2-1.193z" />
-                  </svg>
-                  {/* half overlay */}
-                  <div className="absolute top-0 left-0 w-1/2 overflow-hidden">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                      className="w-4 h-4 text-blue-500"
-                    >
-                      <path d="M12 .587l3.668 7.431 8.2 1.193-5.934 5.782 1.401 8.171L12 18.896l-7.335 3.868 1.401-8.171L.132 9.211l8.2-1.193z" />
-                    </svg>
-                  </div>
-                </>
-              ) : (
-                // empty star
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  className="w-4 h-4 text-gray-300"
-                >
-                  <path d="M12 .587l3.668 7.431 8.2 1.193-5.934 5.782 1.401 8.171L12 18.896l-7.335 3.868 1.401-8.171L.132 9.211l8.2-1.193z" />
-                </svg>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
-
+  // handling left and right swip for mobile view
   useEffect(() => {
-    setData(sampleData);
-  }, []);
-  console.log(data);
+    function handleTouchStart(e) {
+      setTouchStartX(e.touches[0].clientX);
+    }
+
+    function handleTouchEnd(e) {
+      if (touchStartX === null) return;
+
+      const touchEndX = e.changedTouches[0].clientX;
+      const diff = touchStartX - touchEndX;
+
+      if (Math.abs(diff) > 50) {
+        if (diff > 0 && postIndex < data.length - 1) {
+          // swipe left → next
+          setPostIndex((prev) => prev + 1);
+        } else if (diff < 0 && postIndex > 0) {
+          // swipe right → prev
+          setPostIndex((prev) => prev - 1);
+        }
+      }
+      setTouchStartX(null);
+    }
+
+    window.addEventListener("touchstart", handleTouchStart);
+    window.addEventListener("touchend", handleTouchEnd);
+
+    return () => {
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [touchStartX, postIndex, data.length, setPostIndex]);
+
+  // handling prev and next button for desktop view
+  function handlePrev() {
+    if (postIndex > 0) setPostIndex((prev) => prev - 1);
+  }
+
+  function handleNext() {
+    if (postIndex < data.length - 1) setPostIndex((prev) => prev + 1);
+  }
+
+  // Close handler
+  function handleClose() {
+    setPostIndex(null);
+  }
+
   return (
-    <>
-      <div className="flex flex-wrap lg:flex-row gap-4 items-center justify-center w-full">
-        {data.map((post) => {
-          return (
-            <div className="flex flex-col w-[16rem] h-[32rem] rounded-xl md:w-[20rem] md:h-[38rem]  ">
-              <div className=" w-full rounded-t-md  h-[22rem] overflow-hidden ">
-                <img
-                  className="w-full h-full rounded-t-md object-cover"
-                  src={`${post.imgUrl}`}
-                  alt={`${post.date}`}
-                  loading="lazy"
-                />
-              </div>
-              <div className=" flex  flex-col flex-1 bg-white rounded-b-md">
-                <div className="flex flex-row justify-between p-1 items-center">
-                  <div className="flex flex-row p-3 ">
-                    <span>{renderBadges(post.categories)}</span>
-                  </div>
-                  <div>{renderStars(post.rating)}</div>
-                </div>
-                <div className="flex flex-1 flex-col  p-2 gap-2">
-                  <div>{getDateString(post.date)}</div>
-                  <div>{shortenArticle(post.description)}</div>
-                </div>
-                <div className="flex-end w-full bg-gray-400 border-t border-gray rounded-b-md">
-                  <span className="flex justify-center font-bold p-2">
-                    View full Post
-                  </span>
-                </div>
-              </div>
+    <div className="fixed inset-0 z-20 bg-black/70 flex items-center justify-center p-2">
+      {/* Close button */}
+      <button
+        onClick={handleClose}
+        className="absolute top-4 right-4 bg-black/70 text-white  cursor-pointer
+                   w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center 
+                   text-lg sm:text-2xl shadow-md active:scale-95 transition"
+      >
+        <MdClose />
+      </button>
+
+      {/* Carousel content */}
+      <div className="flex items-center justify-center cursor-pointer gap-3 w-full max-w-full md:gap-6 relative">
+        {/* Prev Button  */}
+        {postIndex > 0 && (
+          <button
+            onClick={handlePrev}
+            className="hidden md:flex items-center px-[6px] py-[6px]  justify-center 
+                       text-white text-2xl rounded-[50%]
+                       bg-black/50 rounded-lg absolute left-4 z-10"
+          >
+            <MdChevronLeft />
+          </button>
+        )}
+
+        {/* Cards */}
+        <div className="flex items-center justify-center gap-3 md:gap-6 w-full">
+          {/* left card */}
+          {postIndex > 0 && (
+            <div className="hidden md:block scale-y-90 opacity-70">
+              <CarouselCard post={data[postIndex - 1]} />
             </div>
-          );
-        })}
+          )}
+
+          {/* center card */}
+          <div className=" flex justify-center w-full max-w-sm sm:max-w-md ">
+            <CarouselCard post={data[postIndex]} />
+          </div>
+
+          {/* right card */}
+          {postIndex < data.length - 1 && (
+            <div className="hidden md:block scale-y-90 opacity-70">
+              <CarouselCard post={data[postIndex + 1]} />
+            </div>
+          )}
+        </div>
+
+        {/* Next Button */}
+        {postIndex < data.length - 1 && (
+          <button
+            onClick={handleNext}
+            className="hidden md:flex items-center cursor-pointer px-[6px] py-[6px] justify-center 
+                       text-white text-2xl  rounded-[50%]
+                       bg-black/50 rounded-lg absolute right-4 z-10"
+          >
+            <MdChevronRight />
+          </button>
+        )}
       </div>
-    </>
+    </div>
   );
 }
 
-export default PostCarausel;
+export default PostCarousel;

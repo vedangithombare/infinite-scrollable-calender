@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 import { useEffect, useRef, useState } from "react";
 
-function DisplayCalender() {
+function DisplayCalender({ setClickedDate }) {
   const [currentMonthYear, setCurrentMonthYear] = useState({
     year: null,
     month: null,
@@ -207,6 +207,7 @@ function DisplayCalender() {
       >
         <div ref={topRef}></div>
 
+        {/* Starting empty slots for aligning weekdays */}
         {Array.from({ length: emptyStartCount }).map((_, index) => (
           <div
             key={`empty-${index}`}
@@ -234,9 +235,10 @@ function DisplayCalender() {
                   currentMonthRef.current = el;
               }}
               data-month={monthKey}
-              className={`flex w-1/7 items-start justify-center h-[10rem] border-t border-l border-gray-400 ${
+              className={`flex w-1/7 items-start justify-center cursor-pointer h-[10rem] border-t border-l border-gray-400 ${
                 isCurrentMonth ? "text-black" : "text-gray-400"
               }`}
+              onClick={() => setClickedDate(date)}
             >
               {date.getDate()}
             </div>
@@ -245,7 +247,6 @@ function DisplayCalender() {
 
         <div ref={bottomRef}></div>
       </div>
-      
     </div>
   );
 }
