@@ -1,12 +1,36 @@
-# React + Vite
+#  React Calendar App
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A **scrollable calendar React app** that lets you track posts with images on each date.  
+The app supports infinite scrolling through months, displays posts per date, and is optimized for both desktop and mobile views.
+---
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Infinite Scroll**: Automatically load previous and next months as you scroll.  
+- **Dynamic Header**: Displays the current month and year, updating as you scroll.  
+- **Posts per Date**: Show images or posts associated with each date.  
+- **Responsive Design**: Works seamlessly on desktop and mobile.  
+- **Loader**: Displays a loader for 5 seconds before showing the calendar.  
+- **Lazy Loading Images**: Improves performance and smooth scrolling.  
+- **Optimized Rendering**: Memoization used to prevent unnecessary re-renders.
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## live link
+
+[Calender app](https://infinite-scrollable-calender.pages.dev/)
+
+---
+
+## Installation
+
+1. Install dependencies:
+  ```bash 
+npm install
+```
+2. Start the development server:
+```bash
+npm start
+```
+3. Open your browser and go to:
+http://localhost:3000
